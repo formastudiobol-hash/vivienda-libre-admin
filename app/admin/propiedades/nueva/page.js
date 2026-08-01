@@ -11,6 +11,53 @@ const DEPARTAMENTOS = [
 ];
 const TASA_CAMBIO_REFERENCIA = 6.96; // Solo una ayuda inicial; el campo en Bs. queda editable
 
+// Reduce el peso de cada foto en el navegador ANTES de subirla,
+// sin que se note diferencia visual en la web (mismo aspecto, mucho más liviana)
+function comprimirImagen(archivo, maxAncho = 1600, calidad = 0.8) {
+  return new Promise((resolve, reject) => {
+    const lector = new FileReader();
+
+    lector.onload = (evento) => {
+      const img = new Image();
+
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxAncho) {
+          height = Math.round((height * maxAncho) / width);
+          width = maxAncho;
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("No se pudo comprimir la imagen"));
+              return;
+            }
+            resolve(
+              new File([blob], archivo.name.replace(/\.\w+$/, ".jpg"), {
+                type: "image/jpeg",
+              })
+            );
+          },
+          "image/jpeg",
+          calidad
+        );
+      };
+
+      img.onerror = reject;
+      img.src = evento.target.result;
+    };
+
+    lector.onerror = reject;
+    lector.readAsDataURL(archivo);
+  });
+}
+
 export default function NuevaPropiedadPage() {
   const router = useRouter();
   const [agentes, setAgentes] = useState([]);
@@ -99,30 +146,46 @@ export default function NuevaPropiedadPage() {
       return;
     }
 
-    // 2. Subir cada foto al bucket y registrar su URL en la base de datos
-    for (let i = 0; i < fotos.length; i++) {
-      const archivo = fotos[i];
-      const nombreArchivo = `${propiedad.id}/${Date.now()}-${archivo.name}`;
+    // 2. Comprimir y subir todas las fotos AL MISMO TIEMPO (mucho más rápido
+    //    que subirlas una por una), y registrarlas con un solo insert
+    if (fotos.length > 0) {
+      const resultados = await Promise.all(
+        fotos.map(async (archivoOriginal, i) => {
+          let archivo;
+          try {
+            archivo = await comprimirImagen(archivoOriginal);
+          } catch (e) {
+            archivo = archivoOriginal; // si falla la compresión, sube la original igual
+          }
 
-      const { error: errorSubida } = await supabase.storage
-        .from("imagenes-propiedades")
-        .upload(nombreArchivo, archivo);
+          const nombreArchivo = `${propiedad.id}/${Date.now()}-${i}-${archivo.name}`;
 
-      if (errorSubida) {
-        console.error("Error al subir foto:", errorSubida);
-        continue;
+          const { error: errorSubida } = await supabase.storage
+            .from("imagenes-propiedades")
+            .upload(nombreArchivo, archivo);
+
+          if (errorSubida) {
+            console.error("Error al subir foto:", errorSubida);
+            return null;
+          }
+
+          const { data: urlPublica } = supabase.storage
+            .from("imagenes-propiedades")
+            .getPublicUrl(nombreArchivo);
+
+          return {
+            propiedad_id: propiedad.id,
+            url: urlPublica.publicUrl,
+            es_portada: i === 0,
+            orden: i,
+          };
+        })
+      );
+
+      const filas = resultados.filter(Boolean);
+      if (filas.length > 0) {
+        await supabase.from("propiedad_imagenes").insert(filas);
       }
-
-      const { data: urlPublica } = supabase.storage
-        .from("imagenes-propiedades")
-        .getPublicUrl(nombreArchivo);
-
-      await supabase.from("propiedad_imagenes").insert({
-        propiedad_id: propiedad.id,
-        url: urlPublica.publicUrl,
-        es_portada: i === 0,
-        orden: i,
-      });
     }
 
     router.push("/admin/propiedades");
