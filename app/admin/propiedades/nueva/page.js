@@ -27,6 +27,9 @@ export default function NuevaPropiedadPage() {
     precio_bob: "",
     departamento: "Santa Cruz",
     ciudad: "",
+    dormitorios: "",
+    banos: "",
+    superficie_m2: "",
     agente_id: "",
   });
 
@@ -78,6 +81,9 @@ export default function NuevaPropiedadPage() {
         precio_bob: Number(form.precio_bob),
         departamento: form.departamento,
         ciudad: form.ciudad || form.departamento,
+        dormitorios: form.dormitorios ? Number(form.dormitorios) : null,
+        banos: form.banos ? Number(form.banos) : null,
+        superficie_m2: form.superficie_m2 ? Number(form.superficie_m2) : null,
         agente_id: form.agente_id,
         estado: "Disponible",
       })
@@ -236,6 +242,45 @@ export default function NuevaPropiedadPage() {
               placeholder="Ej. Santa Cruz de la Sierra"
               value={form.ciudad}
               onChange={(e) => actualizarCampo("ciudad", e.target.value)}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Dormitorios
+            </label>
+            <input
+              type="number"
+              placeholder="Ej. 3"
+              value={form.dormitorios}
+              onChange={(e) => actualizarCampo("dormitorios", e.target.value)}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Baños
+            </label>
+            <input
+              type="number"
+              placeholder="Ej. 2"
+              value={form.banos}
+              onChange={(e) => actualizarCampo("banos", e.target.value)}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Superficie (m²)
+            </label>
+            <input
+              type="number"
+              placeholder="Ej. 180"
+              value={form.superficie_m2}
+              onChange={(e) => actualizarCampo("superficie_m2", e.target.value)}
               className="w-full border border-slate-300 rounded-lg px-3 py-2"
             />
           </div>
