@@ -104,67 +104,79 @@ export default function PropiedadesPage() {
               key={p.id}
               className="bg-white rounded-2xl shadow overflow-hidden border border-slate-100"
             >
-              <div className="h-40 bg-slate-200 relative">
-                {fotoActual && (
-                  <img
-                    src={fotoActual.url}
-                    alt={p.titulo}
-                    className="w-full h-full object-cover"
-                  />
-                )}
-                {fotos.length > 1 && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => moverFoto(p.id, fotos.length, -1)}
-                      className="absolute top-1/2 left-2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center"
-                    >
-                      ‹
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moverFoto(p.id, fotos.length, 1)}
-                      className="absolute top-1/2 right-2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center"
-                    >
-                      ›
-                    </button>
-                    <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
-                      {fotos.map((_, i) => (
-                        <span
-                          key={i}
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            i === indiceActual ? "bg-white" : "bg-white/50"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold text-slate-400">
-                    {p.codigo}
-                  </span>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${colorEstado}`}>
-                    {p.estado}
-                  </span>
+              <Link href={`/admin/propiedades/${p.id}`} className="block">
+                <div className="h-40 bg-slate-200 relative">
+                  {fotoActual && (
+                    <img
+                      src={fotoActual.url}
+                      alt={p.titulo}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                  {fotos.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          moverFoto(p.id, fotos.length, -1);
+                        }}
+                        className="absolute top-1/2 left-2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center"
+                      >
+                        ‹
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          moverFoto(p.id, fotos.length, 1);
+                        }}
+                        className="absolute top-1/2 right-2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center"
+                      >
+                        ›
+                      </button>
+                      <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+                        {fotos.map((_, i) => (
+                          <span
+                            key={i}
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              i === indiceActual ? "bg-white" : "bg-white/50"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
-                <h3 className="font-bold text-slate-800 leading-tight">{p.titulo}</h3>
-                <p className="text-sm text-slate-500 mt-1">
-                  {p.departamento} · {p.tipo} · {p.operacion}
-                </p>
-                {specs.length > 0 && (
-                  <p className="text-sm text-slate-500 mt-1">{specs.join("  ·  ")}</p>
-                )}
-                <p className="text-lg font-bold text-slate-800 mt-2">
-                  ${Number(p.precio_usd).toLocaleString()}
-                </p>
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-semibold text-slate-400">
+                      {p.codigo}
+                    </span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${colorEstado}`}>
+                      {p.estado}
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-slate-800 leading-tight">{p.titulo}</h3>
+                  <p className="text-sm text-slate-500 mt-1">
+                    {p.departamento} · {p.tipo} · {p.operacion}
+                  </p>
+                  {specs.length > 0 && (
+                    <p className="text-sm text-slate-500 mt-1">{specs.join("  ·  ")}</p>
+                  )}
+                  <p className="text-lg font-bold text-slate-800 mt-2">
+                    ${Number(p.precio_usd).toLocaleString()}
+                  </p>
+                </div>
+              </Link>
 
+              <div className="px-4 pb-4">
                 {p.estado !== "Vendida" && (
                   <button
                     onClick={() => marcarComoVendida(p.id)}
-                    className="mt-3 w-full bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold py-2 rounded-lg transition"
+                    className="w-full bg-red-50 hover:bg-red-100 text-red-700 text-sm font-semibold py-2 rounded-lg transition"
                   >
                     Marcar como Vendida
                   </button>
