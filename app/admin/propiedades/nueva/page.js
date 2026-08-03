@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { comprimirImagen } from "@/lib/imagenes";
+import VistaPreviaPropiedad from "@/components/VistaPreviaPropiedad";
 
 const TIPOS = ["Casa", "Departamento", "Terreno", "Oficina", "Local Comercial", "Edificio"];
 const OPERACIONES = ["Venta", "Alquiler", "Anticretico"];
 const DEPARTAMENTOS = [
   "Santa Cruz", "La Paz", "Cochabamba", "Sucre", "Tarija", "Oruro", "Potosí", "Beni", "Pando",
 ];
-const TASA_CAMBIO_REFERENCIA = 6.96; // Solo una ayuda inicial; el campo en Bs. queda editable
+const TASA_CAMBIO_REFERENCIA = 11.84; // Solo una ayuda inicial; el campo en Bs. queda editable
 
 export default function NuevaPropiedadPage() {
   const router = useRouter();
@@ -22,6 +23,8 @@ export default function NuevaPropiedadPage() {
   const [form, setForm] = useState({
     codigo: "",
     titulo: "",
+    descripcion: "",
+    direccion: "",
     tipo: "Casa",
     operacion: "Venta",
     precio_usd: "",
@@ -76,6 +79,8 @@ export default function NuevaPropiedadPage() {
       .insert({
         codigo: form.codigo,
         titulo: form.titulo,
+        descripcion: form.descripcion,
+        direccion: form.direccion,
         tipo: form.tipo,
         operacion: form.operacion,
         precio_usd: Number(form.precio_usd),
@@ -139,6 +144,16 @@ export default function NuevaPropiedadPage() {
       const filas = resultados.filter(Boolean);
       if (filas.length > 0) {
         await supabase.from("propiedad_imagenes").insert(filas);
+
+        // Guardamos la URL de portada directo en "propiedades" para que el
+        // listado público sea liviano (no tenga que cruzar con las fotos)
+        const portada = filas.find((f) => f.es_portada);
+        if (portada) {
+          await supabase
+            .from("propiedades")
+            .update({ portada_url: portada.url })
+            .eq("id", propiedad.id);
+        }
       }
     }
 
@@ -146,10 +161,14 @@ export default function NuevaPropiedadPage() {
     router.refresh();
   }
 
+  const previewUrls = fotos.map((f) => URL.createObjectURL(f));
+  const portadaPreview = previewUrls[0] || "";
+
   return (
-    <div className="p-8 max-w-2xl">
+    <div className="p-8 max-w-6xl">
       <h1 className="text-2xl font-bold text-slate-800 mb-6">Agregar Propiedad</h1>
 
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 items-start">
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow p-6 space-y-4">
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -173,6 +192,30 @@ export default function NuevaPropiedadPage() {
             placeholder="Ej. Casa amplia con jardín, Zona Norte"
             value={form.titulo}
             onChange={(e) => actualizarCampo("titulo", e.target.value)}
+            className="w-full border border-slate-300 rounded-lg px-3 py-2"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Descripción (se muestra al abrir el detalle de la propiedad)
+          </label>
+          <textarea
+            rows={4}
+            value={form.descripcion}
+            onChange={(e) => actualizarCampo("descripcion", e.target.value)}
+            placeholder="Ej. Amplia casa de dos plantas, con jardín, cochera para 2 autos..."
+            className="w-full border border-slate-300 rounded-lg px-3 py-2"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Dirección</label>
+          <input
+            type="text"
+            value={form.direccion}
+            onChange={(e) => actualizarCampo("direccion", e.target.value)}
+            placeholder="Ej. Calle Los Sauces #123"
             className="w-full border border-slate-300 rounded-lg px-3 py-2"
           />
         </div>
@@ -346,6 +389,9 @@ export default function NuevaPropiedadPage() {
           {guardando ? "Guardando..." : "Guardar Propiedad"}
         </button>
       </form>
+
+      <VistaPreviaPropiedad form={form} portadaUrl={portadaPreview} galeria={previewUrls} />
+      </div>
     </div>
   );
 }

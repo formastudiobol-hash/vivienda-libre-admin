@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { comprimirImagen } from "@/lib/imagenes";
+import VistaPreviaPropiedad from "@/components/VistaPreviaPropiedad";
 
 const TIPOS = ["Casa", "Departamento", "Terreno", "Oficina", "Local Comercial", "Edificio"];
 const OPERACIONES = ["Venta", "Alquiler", "Anticretico"];
@@ -76,18 +77,34 @@ export default function EditarPropiedadPage({ params }) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
   }
 
-  async function marcarComoPortada(fotoId) {
+  async function marcarComoPortada(fotoId, url) {
     const supabase = createClient();
     await supabase.from("propiedad_imagenes").update({ es_portada: false }).eq("propiedad_id", id);
     await supabase.from("propiedad_imagenes").update({ es_portada: true }).eq("id", fotoId);
+    await supabase.from("propiedades").update({ portada_url: url }).eq("id", id);
     setFotos((prev) => prev.map((f) => ({ ...f, es_portada: f.id === fotoId })));
   }
 
   async function borrarFoto(fotoId) {
     if (!window.confirm("¿Borrar esta foto?")) return;
     const supabase = createClient();
+    const fotoBorrada = fotos.find((f) => f.id === fotoId);
     await supabase.from("propiedad_imagenes").delete().eq("id", fotoId);
-    setFotos((prev) => prev.filter((f) => f.id !== fotoId));
+
+    const restantes = fotos.filter((f) => f.id !== fotoId);
+    setFotos(restantes);
+
+    // Si borramos la portada, la siguiente foto (si hay) pasa a ser portada
+    if (fotoBorrada?.es_portada) {
+      const nuevaPortada = restantes[0] || null;
+      if (nuevaPortada) {
+        await supabase.from("propiedad_imagenes").update({ es_portada: true }).eq("id", nuevaPortada.id);
+        await supabase.from("propiedades").update({ portada_url: nuevaPortada.url }).eq("id", id);
+        setFotos((prev) => prev.map((f) => ({ ...f, es_portada: f.id === nuevaPortada.id })));
+      } else {
+        await supabase.from("propiedades").update({ portada_url: null }).eq("id", id);
+      }
+    }
   }
 
   async function handleGuardar(e) {
@@ -161,6 +178,14 @@ export default function EditarPropiedadPage({ params }) {
       const filas = resultados.filter(Boolean);
       if (filas.length > 0) {
         await supabase.from("propiedad_imagenes").insert(filas);
+
+        const nuevaPortada = filas.find((f) => f.es_portada);
+        if (nuevaPortada) {
+          await supabase
+            .from("propiedades")
+            .update({ portada_url: nuevaPortada.url })
+            .eq("id", id);
+        }
       }
     }
 
@@ -192,11 +217,18 @@ export default function EditarPropiedadPage({ params }) {
   if (cargando) return <div className="p-8 text-slate-500">Cargando...</div>;
   if (errorCarga) return <div className="p-8 text-red-600">{errorCarga}</div>;
 
+  const previewNuevas = nuevasFotos.map((f) => URL.createObjectURL(f));
+  const portadaActual = fotos.find((f) => f.es_portada)?.url || previewNuevas[0] || "";
+  const galeriaCompleta = [...fotos.map((f) => f.url), ...previewNuevas];
+
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-8 max-w-6xl">
       <h1 className="text-2xl font-bold text-slate-800 mb-6">
         Editar Propiedad <span className="text-slate-400 font-normal">— {form.codigo}</span>
       </h1>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 items-start">
+      <div className="max-w-3xl">
 
       {/* Galería: portada + complementarias */}
       <div className="bg-white rounded-2xl shadow p-6 mb-6">
@@ -223,7 +255,7 @@ export default function EditarPropiedadPage({ params }) {
                 {!f.es_portada && (
                   <button
                     type="button"
-                    onClick={() => marcarComoPortada(f.id)}
+                    onClick={() => marcarComoPortada(f.id, f.url)}
                     className="flex-1 bg-white/90 hover:bg-white text-[10px] font-semibold px-1 py-0.5 rounded"
                   >
                     Hacer portada
@@ -438,6 +470,10 @@ export default function EditarPropiedadPage({ params }) {
           </button>
         </div>
       </form>
+      </div>
+
+      <VistaPreviaPropiedad form={form} portadaUrl={portadaActual} galeria={galeriaCompleta} />
+      </div>
     </div>
   );
 }

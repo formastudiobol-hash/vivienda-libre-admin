@@ -7,15 +7,6 @@ import { createClient } from "@/lib/supabase/client";
 export default function PropiedadesPage() {
   const [propiedades, setPropiedades] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [indiceFoto, setIndiceFoto] = useState({});
-
-  function moverFoto(propiedadId, totalFotos, direccion) {
-    setIndiceFoto((prev) => {
-      const actual = prev[propiedadId] || 0;
-      const nuevo = (actual + direccion + totalFotos) % totalFotos;
-      return { ...prev, [propiedadId]: nuevo };
-    });
-  }
 
   async function cargarPropiedades() {
     setLoading(true);
@@ -25,8 +16,7 @@ export default function PropiedadesPage() {
       .select(
         `
         id, codigo, titulo, tipo, operacion, precio_usd, estado, departamento,
-        dormitorios, banos, superficie_m2,
-        propiedad_imagenes ( url, es_portada, orden )
+        dormitorios, banos, superficie_m2, portada_url
       `
       )
       .order("created_at", { ascending: false });
@@ -78,15 +68,6 @@ export default function PropiedadesPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {propiedades.map((p) => {
-          const fotos = (p.propiedad_imagenes || [])
-            .slice()
-            .sort((a, b) => {
-              if (a.es_portada && !b.es_portada) return -1;
-              if (!a.es_portada && b.es_portada) return 1;
-              return (a.orden || 0) - (b.orden || 0);
-            });
-          const indiceActual = indiceFoto[p.id] || 0;
-          const fotoActual = fotos[indiceActual];
           const colorEstado =
             p.estado === "Disponible"
               ? "bg-green-100 text-green-700"
@@ -105,49 +86,14 @@ export default function PropiedadesPage() {
               className="bg-white rounded-2xl shadow overflow-hidden border border-slate-100"
             >
               <Link href={`/admin/propiedades/${p.id}`} className="block">
-                <div className="h-40 bg-slate-200 relative">
-                  {fotoActual && (
+                <div className="h-40 bg-slate-200">
+                  {p.portada_url && (
                     <img
-                      src={fotoActual.url}
+                      src={p.portada_url}
                       alt={p.titulo}
+                      loading="lazy"
                       className="w-full h-full object-cover"
                     />
-                  )}
-                  {fotos.length > 1 && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          moverFoto(p.id, fotos.length, -1);
-                        }}
-                        className="absolute top-1/2 left-2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center"
-                      >
-                        ‹
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          moverFoto(p.id, fotos.length, 1);
-                        }}
-                        className="absolute top-1/2 right-2 -translate-y-1/2 w-7 h-7 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center"
-                      >
-                        ›
-                      </button>
-                      <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
-                        {fotos.map((_, i) => (
-                          <span
-                            key={i}
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              i === indiceActual ? "bg-white" : "bg-white/50"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                    </>
                   )}
                 </div>
                 <div className="p-4">
@@ -195,3 +141,4 @@ export default function PropiedadesPage() {
     </div>
   );
 }
+
